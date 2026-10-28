@@ -94,6 +94,7 @@ class CoinDash extends Phaser.Scene {
       saveDifficulty(id);
       this.scene.restart();
     });
+    this.createTouchStick();
   }
 
   applyTheme() {
@@ -106,10 +107,60 @@ class CoinDash extends Phaser.Scene {
     this.coin.setFillStyle(k.coin);
     this.drones.getChildren().forEach(d => d.setFillStyle(k.drone));
     this.timeCoin.setFillStyle(k.timeCoin);
+    this.paintStick();
     if (this.panel) {
       this.panel.setFillStyle(k.panel, 0.95);
       this.panelText.setColor(k.panelText);
     }
+  }
+
+  createTouchStick() {
+    const t = COIN_DASH.touch;
+    this.stick = {
+      pointerId: null,
+      radius: t.stickRadius,
+      vector: new Phaser.Math.Vector2(),
+      base: this.add.circle(0, 0, t.stickRadius).setDepth(10).setVisible(false),
+      knob: this.add.circle(0, 0, 22).setDepth(11).setVisible(false)
+    };
+    this.paintStick();
+    this.input.on('pointerdown', (p) => {
+      // After a round ends, a fresh tap restarts (short delay so the finishing touch doesn't).
+      if (this.finished) {
+        if (this.time.now - this.finishedAt > t.restartDelay) this.scene.restart();
+        return;
+      }
+      if (this.stick.pointerId !== null) return;
+      // The canvas is scaled to fit the page, so convert the radius to game pixels.
+      const r = t.stickRadius * Math.max(1, this.scale.displayScale.x);
+      this.stick.pointerId = p.id;
+      this.stick.radius = r;
+      this.stick.base.setRadius(r).setPosition(p.x, p.y).setVisible(true);
+      this.stick.knob.setRadius(r * 0.4).setPosition(p.x, p.y).setVisible(true);
+    });
+    this.input.on('pointermove', (p) => {
+      if (p.id !== this.stick.pointerId) return;
+      const { base, knob, vector, radius } = this.stick;
+      vector.set(p.x - base.x, p.y - base.y).limit(radius);
+      knob.setPosition(base.x + vector.x, base.y + vector.y);
+      vector.scale(1 / radius);
+    });
+    const release = (p) => { if (p.id === this.stick.pointerId) this.releaseStick(); };
+    this.input.on('pointerup', release);
+    this.input.on('pointerupoutside', release);
+  }
+
+  paintStick() {
+    const k = COIN_DASH.colors;
+    this.stick.base.setFillStyle(k.stickBase, 0.1).setStrokeStyle(2, k.stick, 0.6);
+    this.stick.knob.setFillStyle(k.stick, 0.45);
+  }
+
+  releaseStick() {
+    this.stick.pointerId = null;
+    this.stick.vector.reset();
+    this.stick.base.setVisible(false);
+    this.stick.knob.setVisible(false);
   }
 
   placeCoin() {
@@ -183,7 +234,11 @@ class CoinDash extends Phaser.Scene {
       - Number(this.cursors.left.isDown || this.keys.A.isDown);
     const dy = Number(this.cursors.down.isDown || this.keys.S.isDown)
       - Number(this.cursors.up.isDown || this.keys.W.isDown);
-    const direction = new Phaser.Math.Vector2(dx, dy).normalize().scale(this.tune.playerSpeed);
+    let direction = new Phaser.Math.Vector2(dx, dy).normalize().scale(this.tune.playerSpeed);
+    // Keyboard wins; otherwise the joystick gives analog speed past its dead zone.
+    if (!dx && !dy && this.stick.vector.length() > COIN_DASH.touch.deadZone) {
+      direction = this.stick.vector.clone().scale(this.tune.playerSpeed);
+    }
     this.player.body.setVelocity(direction.x, direction.y);
     const seconds = Math.max(0, Math.ceil((this.deadline - this.time.now) / 1000));
     this.hud.setText(`Coins: ${this.score}          Best: ${this.best}          Time: ${seconds}s`);
@@ -193,7 +248,9 @@ class CoinDash extends Phaser.Scene {
   finish(reason) {
     if (this.finished) return;
     this.finished = true;
+    this.finishedAt = this.time.now;
     this.physics.pause();
+    this.releaseStick();
     CoinDashSound[reason === 'Time is up!' ? 'timeUp' : 'hit']();
     if (reason !== 'Time is up!') { this.cameras.main.shake(250, 0.01).flash(150, 255, 40, 60); this.burst(this.player.x, this.player.y, COIN_DASH.colors.drone, 16); }
     const c = COIN_DASH;
@@ -201,7 +258,7 @@ class CoinDash extends Phaser.Scene {
     if (newBest) { this.best = this.score; saveBest(this.difficulty, this.best); }
     this.panel = this.add.rectangle(c.width / 2, c.height / 2, 460, 200, c.colors.panel, 0.95);
     this.panelText = this.add.text(c.width / 2, c.height / 2,
-      `${reason}\n${this.score} coins collected\n${newBest ? 'New best! ' : ''}${this.tune.label} best: ${this.best}\nPress R to try again`,
+      `${reason}\n${this.score} coins collected\n${newBest ? 'New best! ' : ''}${this.tune.label} best: ${this.best}\nPress R or tap to try again`,
       { font: '24px monospace', color: c.colors.panelText, align: 'center', lineSpacing: 12 }
     ).setOrigin(0.5);
   }

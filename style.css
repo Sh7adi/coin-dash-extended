@@ -98,6 +98,8 @@ strong { color: var(--key); background: var(--key-bg); padding: var(--key-pad); 
   color: var(--key); background: var(--key-bg); text-shadow: var(--key-glow);
   border: 1px solid var(--key); border-radius: var(--button-radius);
 }
+/* Let the game own touch gestures instead of the page scrolling or zooming. */
+#game { touch-action: none; -webkit-user-select: none; user-select: none; }
 /* Retro-only layout tweaks that aren't just colours. */
 :root[data-theme="retro"] main { padding: 0 16px; }
 :root[data-theme="retro"] header > p:first-child {
