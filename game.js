@@ -17,8 +17,8 @@ class CoinDash extends Phaser.Scene {
     this.deadline = this.time.now + c.roundSeconds * 1000;
     this.physics.world.setBounds(0, 44, c.width, c.height - 44);
     this.add.grid(c.width / 2, c.height / 2, c.width, c.height, 40, 40,
-      c.colors.background, 1, 0x24334b, 0.45);
-    this.hud = this.add.text(18, 12, '', { font: '18px monospace', color: '#ffffff' });
+      c.colors.background, 1, c.colors.grid, 0.45);
+    this.hud = this.add.text(18, 12, '', { font: '18px monospace', color: c.colors.hud });
     this.player = this.add.rectangle(c.width / 2, c.height / 2, 24, 24, c.colors.player);
     this.physics.add.existing(this.player);
     this.player.body.setCollideWorldBounds(true);
@@ -129,10 +129,10 @@ class CoinDash extends Phaser.Scene {
     const c = COIN_DASH;
     const newBest = this.score > this.best;
     if (newBest) { this.best = this.score; saveBest(this.best); }
-    this.add.rectangle(c.width / 2, c.height / 2, 460, 200, 0x0a1120, 0.95);
+    this.add.rectangle(c.width / 2, c.height / 2, 460, 200, c.colors.panel, 0.95);
     this.add.text(c.width / 2, c.height / 2,
       `${reason}\n${this.score} coins collected\n${newBest ? 'New best! ' : ''}Best: ${this.best}\nPress R to try again`,
-      { font: '24px monospace', color: '#ffffff', align: 'center', lineSpacing: 12 }
+      { font: '24px monospace', color: c.colors.panelText, align: 'center', lineSpacing: 12 }
     ).setOrigin(0.5);
   }
 }
