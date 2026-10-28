@@ -56,6 +56,9 @@ class CoinDash extends Phaser.Scene {
     this.finished = false;
     this.panel = this.panelText = null;
     this.enemies = [];
+    this.isPaused = false;
+    this.pauseOverlay = this.pauseText = null;
+    this.time.paused = false;
     this.deadline = this.time.now + c.roundSeconds * 1000;
     this.physics.world.setBounds(0, 44, c.width, c.height - 44);
     this.grid = this.add.grid(c.width / 2, c.height / 2, c.width, c.height, 40, 40,
@@ -106,6 +109,8 @@ class CoinDash extends Phaser.Scene {
       this.scene.restart();
     });
     this.createTouchStick();
+    this.input.keyboard.on('keydown-P', () => this.togglePause());
+    this.input.keyboard.on('keydown-ESC', () => this.togglePause());
   }
 
   applyTheme() {
@@ -125,6 +130,34 @@ class CoinDash extends Phaser.Scene {
     if (this.panel) {
       this.panel.setFillStyle(k.panel, 0.95);
       this.panelText.setColor(k.panelText);
+    }
+    if (this.pauseOverlay) {
+      this.pauseOverlay.setFillStyle(k.panel, 0.9);
+      this.pauseText.setColor(k.panelText);
+    }
+  }
+
+  // Freeze physics, scene timers and tweens; the round clock is kept exact by shifting the deadline on resume.
+  togglePause() {
+    if (this.finished) return;
+    this.isPaused = !this.isPaused;
+    if (this.isPaused) {
+      this.pausedAt = this.time.now;
+      this.physics.pause();
+      this.time.paused = true;
+      this.tweens.pauseAll();
+      const c = COIN_DASH;
+      this.pauseOverlay = this.add.rectangle(c.width / 2, c.height / 2, 320, 140, c.colors.panel, 0.9).setDepth(100);
+      this.pauseText = this.add.text(c.width / 2, c.height / 2, 'PAUSED\n\nP to resume',
+        { font: 'bold 28px monospace', color: c.colors.panelText, align: 'center' }).setOrigin(0.5).setDepth(101);
+    } else {
+      this.deadline += this.time.now - this.pausedAt;
+      this.physics.resume();
+      this.time.paused = false;
+      this.tweens.resumeAll();
+      this.pauseOverlay.destroy();
+      this.pauseText.destroy();
+      this.pauseOverlay = this.pauseText = null;
     }
   }
 
@@ -357,7 +390,7 @@ class CoinDash extends Phaser.Scene {
   }
 
   update(time, delta) {
-    if (this.finished) return;
+    if (this.finished || this.isPaused) return;
     this.steerHunters(delta);
     const dx = Number(this.cursors.right.isDown || this.keys.D.isDown)
       - Number(this.cursors.left.isDown || this.keys.A.isDown);
