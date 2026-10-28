@@ -6,6 +6,13 @@ window.COIN_DASH = {
   playerSpeed: 240,
   droneSpeed: 105,
   droneCount: 3,
+  // Difficulty presets override the tuning above; press 1/2/3 in game to switch.
+  difficulties: {
+    easy:   { label: 'Easy',   roundSeconds: 60, playerSpeed: 260, droneSpeed: 80,  droneCount: 2 },
+    normal: { label: 'Normal', roundSeconds: 45, playerSpeed: 240, droneSpeed: 105, droneCount: 3 },
+    hard:   { label: 'Hard',   roundSeconds: 35, playerSpeed: 240, droneSpeed: 150, droneCount: 5 }
+  },
+  defaultDifficulty: 'normal',
   timeCoin: { every: [10, 15], lifetime: 4, bonusSeconds: 5 },
   themes: {
     // Neon arcade palette: near-black backdrop, synthwave grid, glowing saturated sprites.
