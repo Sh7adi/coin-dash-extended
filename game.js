@@ -37,6 +37,7 @@ class CoinDash extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.coin, () => {
       if (this.finished) return;
       this.score++;
+      CoinDashSound.coin();
       this.placeCoin();
     });
     this.physics.add.overlap(this.player, this.drones, () => this.finish('A drone caught you!'));
@@ -74,6 +75,7 @@ class CoinDash extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
     this.physics.pause();
+    CoinDashSound[reason === 'Time is up!' ? 'timeUp' : 'hit']();
     const c = COIN_DASH;
     const newBest = this.score > this.best;
     if (newBest) { this.best = this.score; saveBest(this.best); }
