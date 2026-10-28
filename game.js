@@ -41,6 +41,12 @@ class CoinDash extends Phaser.Scene {
       this.placeCoin();
     });
     this.physics.add.overlap(this.player, this.drones, () => this.finish('A drone caught you!'));
+    this.timeCoin = this.add.circle(0, 0, 11, c.timeCoin.color).setStrokeStyle(3, 0xffffff).setVisible(false);
+    this.physics.add.existing(this.timeCoin);
+    this.timeCoin.body.setCircle(11);
+    this.timeCoin.body.enable = false;
+    this.physics.add.overlap(this.player, this.timeCoin, () => this.collectTimeCoin());
+    this.scheduleTimeCoin();
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys('W,A,S,D,R');
     this.input.keyboard.on('keydown-R', () => this.scene.restart());
@@ -56,6 +62,50 @@ class CoinDash extends Phaser.Scene {
     } while (Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 60);
     this.coin.setPosition(x, y);
     this.coin.body.reset(x, y);
+  }
+
+  scheduleTimeCoin() {
+    const [min, max] = COIN_DASH.timeCoin.every;
+    this.time.delayedCall(Phaser.Math.FloatBetween(min, max) * 1000, () => this.spawnTimeCoin());
+  }
+
+  spawnTimeCoin() {
+    if (this.finished) return;
+    const c = COIN_DASH;
+    let x, y;
+    do {
+      x = Phaser.Math.Between(25, c.width - 25);
+      y = Phaser.Math.Between(70, c.height - 25);
+    } while (Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 60);
+    const t = this.timeCoin.setPosition(x, y).setVisible(true).setAlpha(1).setScale(1);
+    t.body.enable = true;
+    t.body.reset(x, y);
+    this.tweens.add({ targets: t, scale: 1.3, duration: 350, yoyo: true, repeat: -1 });
+    const life = c.timeCoin.lifetime * 1000;
+    this.timeCoinTimers = [
+      this.time.delayedCall(life - 1000, () => this.tweens.add({ targets: t, alpha: 0.15, duration: 125, yoyo: true, repeat: -1 })),
+      this.time.delayedCall(life, () => this.hideTimeCoin())
+    ];
+  }
+
+  hideTimeCoin() {
+    const t = this.timeCoin;
+    this.tweens.killTweensOf(t);
+    (this.timeCoinTimers || []).forEach(timer => timer.remove());
+    this.timeCoinTimers = null;
+    t.setVisible(false).setAlpha(1).setScale(1);
+    t.body.enable = false;
+    if (!this.finished) this.scheduleTimeCoin();
+  }
+
+  collectTimeCoin() {
+    if (this.finished || !this.timeCoin.visible) return;
+    const bonus = COIN_DASH.timeCoin.bonusSeconds;
+    this.deadline += bonus * 1000;
+    const label = this.add.text(this.timeCoin.x, this.timeCoin.y - 14, `+${bonus}s`,
+      { font: 'bold 20px monospace', color: '#' + COIN_DASH.timeCoin.color.toString(16).padStart(6, '0') }).setOrigin(0.5);
+    this.tweens.add({ targets: label, y: label.y - 36, alpha: 0, duration: 900, onComplete: () => label.destroy() });
+    this.hideTimeCoin();
   }
 
   update() {
