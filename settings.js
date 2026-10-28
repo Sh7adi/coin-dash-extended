@@ -21,6 +21,8 @@ window.COIN_DASH = {
     hunter: { appearAt: 8, speed: 75, turnRate: 0.03, size: 22 },
     dasher: { appearAt: 18, cruiseSpeed: 50, dashSpeed: 430, dashEvery: [2.5, 4], windup: 0.6, dashTime: 0.45, radius: 11 }
   },
+  // Reach a level's coin goal before the clock runs out to advance; the clock then resets.
+  levels: { firstGoal: 8, goalStep: 2, droneSpeedStep: 15, maxDrones: 6, newDroneWarning: 1 },
   timeCoin: { every: [10, 15], lifetime: 4, bonusSeconds: 5 },
   themes: {
     // Neon arcade palette: near-black backdrop, synthwave grid, glowing saturated sprites.
@@ -38,6 +40,7 @@ window.COIN_DASH = {
       stickBase: 0xffffff,  // touch joystick ring fill (drawn faint)
       stick: 0x00f0ff,      // touch joystick ring outline and knob
       hud: '#b6ff3b',       // lime HUD text (CSS string for Phaser text)
+      levelBanner: '#00f0ff', // "LEVEL n" text
       panel: 0x12061f,      // end-of-round panel
       panelText: '#f2fbff'  // near-white panel text
     },
@@ -56,6 +59,7 @@ window.COIN_DASH = {
       stickBase: 0x0f380f,  // joystick ring fill: white would vanish on the light field
       stick: 0x0f380f,
       hud: '#0f380f',
+      levelBanner: '#0f380f',
       panel: 0x0f380f,      // game-over panel
       panelText: '#e0f8d0'
     }

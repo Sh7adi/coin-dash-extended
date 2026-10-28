@@ -43,6 +43,12 @@ class CoinDash extends Phaser.Scene {
     // Preset values override the base tuning for this round.
     const c = this.tune = { ...COIN_DASH, ...COIN_DASH.difficulties[this.difficulty] };
     this.score = 0;
+    this.level = 1;
+    this.levelCoins = 0;
+    this.goal = c.levels.firstGoal;
+    this.droneSpeed = c.droneSpeed;
+    this.banner = null;
+    this.incomingDrones = [];
     this.best = loadBest(this.difficulty);
     this.finished = false;
     this.panel = this.panelText = null;
@@ -63,18 +69,16 @@ class CoinDash extends Phaser.Scene {
     this.placeCoin();
     this.drones = this.physics.add.group();
     for (let i = 0; i < c.droneCount; i++) {
-      const drone = this.add.rectangle(90 + (i % 3) * 270, 100 + Math.floor(i / 3) * 300, 26, 26, c.colors.drone);
-      this.drones.add(drone);
-      drone.body.setCollideWorldBounds(true).setBounce(1, 1);
-      const angle = (35 + i * 105) * Math.PI / 180;
-      drone.body.setVelocity(Math.cos(angle) * c.droneSpeed, Math.sin(angle) * c.droneSpeed);
+      this.addDrone(this.add.rectangle(90 + (i % 3) * 270, 100 + Math.floor(i / 3) * 300, 26, 26, c.colors.drone), 35 + i * 105);
     }
     this.physics.add.overlap(this.player, this.coin, () => {
       if (this.finished) return;
       this.score++;
+      this.levelCoins++;
       CoinDashSound.coin();
       this.burst(this.coin.x, this.coin.y, COIN_DASH.colors.coin);
       this.placeCoin();
+      if (this.levelCoins >= this.goal) this.levelUp();
     });
     this.physics.add.overlap(this.player, this.drones,
       (player, enemy) => this.finish(`A ${enemy.getData('kind') || 'drone'} caught you!`, enemy.fillColor));
@@ -110,9 +114,11 @@ class CoinDash extends Phaser.Scene {
     this.player.setFillStyle(k.player);
     this.coin.setFillStyle(k.coin);
     this.drones.getChildren().forEach(d => { if (!d.getData('kind')) d.setFillStyle(k.drone); });
+    this.incomingDrones.forEach(d => d.setFillStyle(k.drone));
     this.enemies.forEach(e => this.paintEnemy(e));
     this.timeCoin.setFillStyle(k.timeCoin);
     this.paintStick();
+    if (this.banner) this.banner.setColor(k.levelBanner);
     if (this.panel) {
       this.panel.setFillStyle(k.panel, 0.95);
       this.panelText.setColor(k.panelText);
@@ -166,6 +172,52 @@ class CoinDash extends Phaser.Scene {
     this.stick.vector.reset();
     this.stick.base.setVisible(false);
     this.stick.knob.setVisible(false);
+  }
+
+  addDrone(drone, angleDeg) {
+    this.drones.add(drone);
+    drone.body.setCollideWorldBounds(true).setBounce(1, 1);
+    this.physics.velocityFromAngle(angleDeg, this.droneSpeed, drone.body.velocity);
+  }
+
+  levelUp() {
+    const c = COIN_DASH, l = c.levels;
+    this.level++;
+    this.levelCoins = 0;
+    this.goal = l.firstGoal + (this.level - 1) * l.goalStep;
+    this.droneSpeed += l.droneSpeedStep;
+    this.deadline = this.time.now + this.tune.roundSeconds * 1000;
+    // Only the plain drones speed up and count toward the cap; hunters and dashers keep their own tuning.
+    const drones = this.drones.getChildren().filter(d => !d.getData('kind'));
+    drones.forEach((d) => d.body.velocity.setLength(this.droneSpeed));
+    if (drones.length + this.incomingDrones.length < l.maxDrones) this.spawnDrone();
+    CoinDashSound.levelUp();
+    if (this.banner) this.banner.destroy();
+    const banner = this.banner = this.add.text(c.width / 2, c.height / 2 - 60, `LEVEL ${this.level}`,
+      { font: 'bold 48px monospace', color: c.colors.levelBanner }).setOrigin(0.5).setDepth(5);
+    this.tweens.add({ targets: banner, y: banner.y - 30, alpha: 0, delay: 600, duration: 900,
+      onComplete: () => { banner.destroy(); if (this.banner === banner) this.banner = null; } });
+  }
+
+  spawnDrone() {
+    const c = COIN_DASH;
+    let x, y;
+    do {
+      x = Phaser.Math.Between(40, c.width - 40);
+      y = Phaser.Math.Between(84, c.height - 40);
+    } while (Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 200);
+    // Blink harmlessly first so a new drone never appears on top of the player unannounced.
+    const drone = this.add.rectangle(x, y, 26, 26, c.colors.drone);
+    this.incomingDrones.push(drone);
+    this.tweens.add({ targets: drone, alpha: { from: 0.15, to: 1 }, duration: 250, yoyo: true, repeat: -1 });
+    this.time.delayedCall(c.levels.newDroneWarning * 1000, () => {
+      if (this.finished) return;
+      Phaser.Utils.Array.Remove(this.incomingDrones, drone);
+      this.tweens.killTweensOf(drone);
+      drone.setAlpha(1);
+      // Diagonal-ish headings so it doesn't just bounce along one axis.
+      this.addDrone(drone, Phaser.Math.Between(20, 70) + 90 * Phaser.Math.Between(0, 3));
+    });
   }
 
   placeCoin() {
@@ -315,7 +367,8 @@ class CoinDash extends Phaser.Scene {
     }
     this.player.body.setVelocity(direction.x, direction.y);
     const seconds = Math.max(0, Math.ceil((this.deadline - this.time.now) / 1000));
-    this.hud.setText(`Coins: ${this.score}          Best: ${this.best}          Time: ${seconds}s`);
+    // Tighter than the original spacing so it stays clear of the difficulty label on the right.
+    this.hud.setText(`Level ${this.level}   Goal ${this.levelCoins}/${this.goal}   Coins ${this.score}   Best ${this.best}   Time ${seconds}s`);
     if (seconds === 0) this.finish('Time is up!');
   }
 
@@ -332,7 +385,7 @@ class CoinDash extends Phaser.Scene {
     if (newBest) { this.best = this.score; saveBest(this.difficulty, this.best); }
     this.panel = this.add.rectangle(c.width / 2, c.height / 2, 460, 200, c.colors.panel, 0.95);
     this.panelText = this.add.text(c.width / 2, c.height / 2,
-      `${reason}\n${this.score} coins collected\n${newBest ? 'New best! ' : ''}${this.tune.label} best: ${this.best}\nPress R or tap to try again`,
+      `${reason}\nLevel ${this.level} · ${this.score} coins\n${newBest ? 'New best! ' : ''}${this.tune.label} best: ${this.best}\nPress R or tap to try again`,
       { font: '24px monospace', color: c.colors.panelText, align: 'center', lineSpacing: 12 }
     ).setOrigin(0.5);
   }
