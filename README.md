@@ -48,4 +48,4 @@ https://docs.phaser.io/phaser/getting-started/making-your-first-phaser-game
 ## Team
 
 - Sh7adi
-- _(partner, to be added)_
+- Bashar Egbaria
