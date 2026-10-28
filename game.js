@@ -6,6 +6,20 @@ function loadBest() {
 function saveBest(n) {
   try { localStorage.setItem(BEST_KEY, String(n)); } catch (e) { /* storage unavailable */ }
 }
+function showThemeLabel() {
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = 'Theme: ' + (COIN_DASH.theme === 'retro' ? 'Retro' : 'Neon');
+}
+function toggleTheme() {
+  const c = COIN_DASH;
+  c.theme = c.theme === 'retro' ? 'neon' : 'retro';
+  c.colors = c.themes[c.theme];
+  document.documentElement.dataset.theme = c.theme;
+  try { localStorage.setItem('coinDash.theme', c.theme); } catch (e) { /* storage unavailable */ }
+  showThemeLabel();
+  const scene = window.coinDashGame && window.coinDashGame.scene.getScene('CoinDash');
+  if (scene && scene.sys.isActive() && scene.hud) scene.applyTheme();
+}
 class CoinDash extends Phaser.Scene {
   constructor() { super('CoinDash'); }
 
@@ -14,9 +28,10 @@ class CoinDash extends Phaser.Scene {
     this.score = 0;
     this.best = loadBest();
     this.finished = false;
+    this.panel = this.panelText = null;
     this.deadline = this.time.now + c.roundSeconds * 1000;
     this.physics.world.setBounds(0, 44, c.width, c.height - 44);
-    this.add.grid(c.width / 2, c.height / 2, c.width, c.height, 40, 40,
+    this.grid = this.add.grid(c.width / 2, c.height / 2, c.width, c.height, 40, 40,
       c.colors.background, 1, c.colors.grid, 0.45);
     this.hud = this.add.text(18, 12, '', { font: '18px monospace', color: c.colors.hud });
     this.player = this.add.rectangle(c.width / 2, c.height / 2, 24, 24, c.colors.player);
@@ -41,7 +56,7 @@ class CoinDash extends Phaser.Scene {
       this.placeCoin();
     });
     this.physics.add.overlap(this.player, this.drones, () => this.finish('A drone caught you!'));
-    this.timeCoin = this.add.circle(0, 0, 11, c.timeCoin.color).setStrokeStyle(3, 0xffffff).setVisible(false);
+    this.timeCoin = this.add.circle(0, 0, 11, c.colors.timeCoin).setStrokeStyle(3, 0xffffff).setVisible(false);
     this.physics.add.existing(this.timeCoin);
     this.timeCoin.body.setCircle(11);
     this.timeCoin.body.enable = false;
@@ -50,6 +65,22 @@ class CoinDash extends Phaser.Scene {
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys('W,A,S,D,R');
     this.input.keyboard.on('keydown-R', () => this.scene.restart());
+    this.input.keyboard.on('keydown-T', toggleTheme);
+  }
+
+  applyTheme() {
+    const k = COIN_DASH.colors;
+    this.cameras.main.setBackgroundColor(k.background);
+    this.grid.setFillStyle(k.background, 1).setOutlineStyle(k.grid, 0.45);
+    this.hud.setColor(k.hud);
+    this.player.setFillStyle(k.player);
+    this.coin.setFillStyle(k.coin);
+    this.drones.getChildren().forEach(d => d.setFillStyle(k.drone));
+    this.timeCoin.setFillStyle(k.timeCoin);
+    if (this.panel) {
+      this.panel.setFillStyle(k.panel, 0.95);
+      this.panelText.setColor(k.panelText);
+    }
   }
 
   placeCoin() {
@@ -103,7 +134,7 @@ class CoinDash extends Phaser.Scene {
     const bonus = COIN_DASH.timeCoin.bonusSeconds;
     this.deadline += bonus * 1000;
     const label = this.add.text(this.timeCoin.x, this.timeCoin.y - 14, `+${bonus}s`,
-      { font: 'bold 20px monospace', color: '#' + COIN_DASH.timeCoin.color.toString(16).padStart(6, '0') }).setOrigin(0.5);
+      { font: 'bold 20px monospace', color: '#' + COIN_DASH.colors.timeCoin.toString(16).padStart(6, '0') }).setOrigin(0.5);
     this.tweens.add({ targets: label, y: label.y - 36, alpha: 0, duration: 900, onComplete: () => label.destroy() });
     this.hideTimeCoin();
   }
@@ -129,8 +160,8 @@ class CoinDash extends Phaser.Scene {
     const c = COIN_DASH;
     const newBest = this.score > this.best;
     if (newBest) { this.best = this.score; saveBest(this.best); }
-    this.add.rectangle(c.width / 2, c.height / 2, 460, 200, c.colors.panel, 0.95);
-    this.add.text(c.width / 2, c.height / 2,
+    this.panel = this.add.rectangle(c.width / 2, c.height / 2, 460, 200, c.colors.panel, 0.95);
+    this.panelText = this.add.text(c.width / 2, c.height / 2,
       `${reason}\n${this.score} coins collected\n${newBest ? 'New best! ' : ''}Best: ${this.best}\nPress R to try again`,
       { font: '24px monospace', color: c.colors.panelText, align: 'center', lineSpacing: 12 }
     ).setOrigin(0.5);
@@ -146,3 +177,5 @@ window.coinDashGame = new Phaser.Game({
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_HORIZONTALLY },
   scene: CoinDash
 });
+showThemeLabel();
+document.getElementById('theme-toggle').addEventListener('click', toggleTheme);

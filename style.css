@@ -1,4 +1,4 @@
-/* Neon arcade theme — system fonts only, no external assets. */
+/* Two switchable themes on <html data-theme>: neon arcade (default) and retro handheld. System fonts only. */
 :root {
   --bg: #07030d;
   --text: #e9e4ff;
@@ -7,38 +7,103 @@
   --cyan: #00f0ff;
   --lime: #b6ff3b;
   --gold: #ffd400;
+  --font: 17px/1.5 system-ui, sans-serif;
+  --page-bg:
+    radial-gradient(ellipse at 50% -10%, rgba(255, 46, 136, .18), transparent 60%),
+    radial-gradient(ellipse at 50% 110%, rgba(0, 240, 255, .12), transparent 60%),
+    var(--bg);
+  --kicker: var(--lime);
+  --kicker-bg: transparent;
+  --kicker-glow: 0 0 6px rgba(182, 255, 59, .7);
+  --title: #fff0f8;
+  --title-glow: 0 0 4px #fff, 0 0 10px var(--pink), 0 0 22px var(--pink), 0 0 42px rgba(255, 46, 136, .6);
+  --frame-border: 2px solid var(--cyan);
+  --frame-outline: none;
+  --frame-radius: 12px;
+  --frame-bg: transparent;
+  --frame-pad: 0;
+  --frame-shadow:
+    0 0 6px var(--cyan),
+    0 0 20px rgba(0, 240, 255, .55),
+    0 0 48px rgba(255, 46, 136, .35),
+    inset 0 0 12px rgba(0, 240, 255, .4);
+  --key: var(--gold);
+  --key-bg: transparent;
+  --key-glow: 0 0 6px rgba(255, 212, 0, .55);
+  --key-pad: 0;
+  --button-radius: 6px;
+}
+:root[data-theme="retro"] {
+  --darkest: #0f380f;
+  --dark: #306230;
+  --light: #8bac0f;
+  --lightest: #9bbc0f;
+  --paper: #c4cfa1;
+  --bezel: #4a4f45;
+  --bg: var(--paper);
+  --text: var(--darkest);
+  --muted: var(--darkest);
+  --font: 16px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, "Courier New", monospace;
+  --page-bg: repeating-linear-gradient(0deg, transparent 0 3px, rgba(15, 56, 15, .05) 3px 4px), var(--paper);
+  --kicker: var(--lightest);
+  --kicker-bg: var(--darkest);
+  --kicker-glow: none;
+  --title: var(--darkest);
+  --title-glow: 3px 3px 0 var(--light);
+  --frame-border: 16px solid var(--bezel);
+  --frame-outline: 4px solid var(--darkest);
+  --frame-radius: 0;
+  --frame-bg: var(--darkest);
+  --frame-pad: 4px;
+  --frame-shadow: inset 0 0 0 4px var(--darkest), 8px 8px 0 var(--dark);
+  --key: var(--lightest);
+  --key-bg: var(--darkest);
+  --key-glow: none;
+  --key-pad: 0 6px;
+  --button-radius: 0;
 }
 * { box-sizing: border-box; }
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(ellipse at 50% -10%, rgba(255, 46, 136, .18), transparent 60%),
-    radial-gradient(ellipse at 50% 110%, rgba(0, 240, 255, .12), transparent 60%),
-    var(--bg);
+  background: var(--page-bg);
   color: var(--text);
-  font: 17px/1.5 system-ui, sans-serif;
+  font: var(--font);
 }
 main { max-width: 850px; margin: 30px auto; padding: 0 20px; }
 header > p:first-child {
-  color: var(--lime); font-size: 12px; letter-spacing: .25em;
-  text-shadow: 0 0 6px rgba(182, 255, 59, .7);
+  color: var(--kicker); background: var(--kicker-bg); font-size: 12px; letter-spacing: .25em;
+  text-shadow: var(--kicker-glow);
 }
 h1 {
   margin: 0; font-size: 44px; letter-spacing: .04em; text-transform: uppercase;
-  color: #fff0f8;
-  text-shadow: 0 0 4px #fff, 0 0 10px var(--pink), 0 0 22px var(--pink), 0 0 42px rgba(255, 46, 136, .6);
+  color: var(--title);
+  text-shadow: var(--title-glow);
 }
 header > p:last-child { color: var(--muted); }
 #game {
-  border: 2px solid var(--cyan);
-  border-radius: 12px;
+  border: var(--frame-border);
+  outline: var(--frame-outline);
+  border-radius: var(--frame-radius);
+  background: var(--frame-bg);
+  padding: var(--frame-pad);
   overflow: hidden;
-  box-shadow:
-    0 0 6px var(--cyan),
-    0 0 20px rgba(0, 240, 255, .55),
-    0 0 48px rgba(255, 46, 136, .35),
-    inset 0 0 12px rgba(0, 240, 255, .4);
+  box-shadow: var(--frame-shadow);
 }
 canvas { display: block; }
-strong { color: var(--gold); text-shadow: 0 0 6px rgba(255, 212, 0, .55); }
+strong { color: var(--key); background: var(--key-bg); padding: var(--key-pad); text-shadow: var(--key-glow); }
+#theme-toggle {
+  margin-left: 8px; padding: 2px 10px; cursor: pointer;
+  font: inherit; font-size: 14px;
+  color: var(--key); background: var(--key-bg); text-shadow: var(--key-glow);
+  border: 1px solid var(--key); border-radius: var(--button-radius);
+}
+/* Retro-only layout tweaks that aren't just colours. */
+:root[data-theme="retro"] main { padding: 0 16px; }
+:root[data-theme="retro"] header > p:first-child {
+  display: inline-block; margin: 0 0 8px; padding: 2px 8px; font-weight: bold; letter-spacing: .2em;
+}
+:root[data-theme="retro"] h1 { font-size: 40px; font-weight: 900; letter-spacing: .08em; }
+:root[data-theme="retro"] #game,
+:root[data-theme="retro"] canvas { image-rendering: pixelated; }
+:root[data-theme="retro"] #theme-toggle { border-color: var(--darkest); }
