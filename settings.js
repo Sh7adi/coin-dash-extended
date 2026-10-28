@@ -15,6 +15,12 @@ window.COIN_DASH = {
   defaultDifficulty: 'normal',
   // Floating joystick: touch anywhere on the game and drag. Radius is in screen (CSS) pixels.
   touch: { stickRadius: 55, deadZone: 0.2, restartDelay: 600 },
+  // Extra enemies join the round appearAt seconds in, after blinking for `warning` seconds.
+  enemies: {
+    warning: 1,
+    hunter: { appearAt: 8, speed: 75, turnRate: 0.03, size: 22 },
+    dasher: { appearAt: 18, cruiseSpeed: 50, dashSpeed: 430, dashEvery: [2.5, 4], windup: 0.6, dashTime: 0.45, radius: 11 }
+  },
   timeCoin: { every: [10, 15], lifetime: 4, bonusSeconds: 5 },
   themes: {
     // Neon arcade palette: near-black backdrop, synthwave grid, glowing saturated sprites.
@@ -24,6 +30,10 @@ window.COIN_DASH = {
       player: 0x00f0ff,     // electric cyan
       coin: 0xffd400,       // neon gold
       drone: 0xff2e88,      // hot pink
+      hunter: 0xff8c1a,     // orange homing enemy
+      dasher: 0xb44dff,     // violet charging enemy
+      dasherFlash: 0xffffff, // dasher fill while winding up a charge
+      enemyStroke: 0xffffff, // outline on hunters and dashers
       timeCoin: 0x39ff14,   // neon green bonus coin
       stickBase: 0xffffff,  // touch joystick ring fill (drawn faint)
       stick: 0x00f0ff,      // touch joystick ring outline and knob
@@ -38,6 +48,10 @@ window.COIN_DASH = {
       player: 0x0f380f,     // darkest green square
       coin: 0xe0f8d0,       // pale highlight so coins pop off the field
       drone: 0x9c2a2a,      // single accent: muted brick red
+      hunter: 0xb5651d,     // muted ochre: reads apart from the red drones and green player
+      dasher: 0x4b3f72,     // muted indigo
+      dasherFlash: 0xffffff,
+      enemyStroke: 0x0f380f, // dark outline; white would wash out on the light field
       timeCoin: 0x1f4fd8,   // cobalt blue bonus coin, distinct from the greens and red
       stickBase: 0x0f380f,  // joystick ring fill: white would vanish on the light field
       stick: 0x0f380f,

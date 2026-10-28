@@ -46,6 +46,7 @@ class CoinDash extends Phaser.Scene {
     this.best = loadBest(this.difficulty);
     this.finished = false;
     this.panel = this.panelText = null;
+    this.enemies = [];
     this.deadline = this.time.now + c.roundSeconds * 1000;
     this.physics.world.setBounds(0, 44, c.width, c.height - 44);
     this.grid = this.add.grid(c.width / 2, c.height / 2, c.width, c.height, 40, 40,
@@ -75,7 +76,10 @@ class CoinDash extends Phaser.Scene {
       this.burst(this.coin.x, this.coin.y, COIN_DASH.colors.coin);
       this.placeCoin();
     });
-    this.physics.add.overlap(this.player, this.drones, () => this.finish('A drone caught you!'));
+    this.physics.add.overlap(this.player, this.drones,
+      (player, enemy) => this.finish(`A ${enemy.getData('kind') || 'drone'} caught you!`, enemy.fillColor));
+    this.time.delayedCall(c.enemies.hunter.appearAt * 1000, () => this.spawnEnemy('hunter'));
+    this.time.delayedCall(c.enemies.dasher.appearAt * 1000, () => this.spawnEnemy('dasher'));
     this.timeCoin = this.add.circle(0, 0, 11, c.colors.timeCoin).setStrokeStyle(3, 0xffffff).setVisible(false);
     this.physics.add.existing(this.timeCoin);
     this.timeCoin.body.setCircle(11);
@@ -105,7 +109,8 @@ class CoinDash extends Phaser.Scene {
     this.difficultyLabel.setColor(k.hud);
     this.player.setFillStyle(k.player);
     this.coin.setFillStyle(k.coin);
-    this.drones.getChildren().forEach(d => d.setFillStyle(k.drone));
+    this.drones.getChildren().forEach(d => { if (!d.getData('kind')) d.setFillStyle(k.drone); });
+    this.enemies.forEach(e => this.paintEnemy(e));
     this.timeCoin.setFillStyle(k.timeCoin);
     this.paintStick();
     if (this.panel) {
@@ -183,6 +188,74 @@ class CoinDash extends Phaser.Scene {
     this.time.delayedCall(450, () => fx.destroy());
   }
 
+  spawnEnemy(kind) {
+    if (this.finished) return;
+    const c = COIN_DASH, e = c.enemies[kind];
+    // Appear well away from the player and blink before becoming dangerous.
+    let x, y;
+    do {
+      x = Phaser.Math.Between(40, c.width - 40);
+      y = Phaser.Math.Between(84, c.height - 40);
+    } while (Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 250);
+    const enemy = kind === 'hunter' ? this.add.rectangle(x, y, e.size, e.size) : this.add.circle(x, y, e.radius);
+    enemy.setData('kind', kind);
+    this.enemies.push(enemy);
+    this.paintEnemy(enemy);
+    this.tweens.add({ targets: enemy, alpha: { from: 0.15, to: 1 }, duration: 250, yoyo: true, repeat: -1 });
+    this.time.delayedCall(c.enemies.warning * 1000, () => {
+      if (this.finished) return;
+      this.tweens.killTweensOf(enemy);
+      enemy.setAlpha(1);
+      this.drones.add(enemy);
+      enemy.body.setCollideWorldBounds(true);
+      if (kind === 'hunter') {
+        enemy.body.setAngularVelocity(120);
+      } else {
+        enemy.body.setCircle(e.radius).setBounce(1, 1);
+        this.dasherCruise(enemy);
+      }
+    });
+  }
+
+  // Colours are looked up from the active theme each time, so applyTheme() can repaint mid-round.
+  paintEnemy(enemy) {
+    const k = COIN_DASH.colors, kind = enemy.getData('kind');
+    enemy.setFillStyle(enemy.getData('windup') ? k.dasherFlash : k[kind])
+      .setStrokeStyle(kind === 'hunter' ? 2 : 3, k.enemyStroke);
+  }
+
+  steerHunters(delta) {
+    const e = COIN_DASH.enemies.hunter;
+    // Frame-rate independent easing toward the player; turning sharply also slows it down.
+    const t = 1 - Math.pow(1 - e.turnRate, delta / (1000 / 60));
+    this.drones.getChildren().forEach((d) => {
+      if (d.getData('kind') !== 'hunter') return;
+      const want = new Phaser.Math.Vector2(this.player.x - d.x, this.player.y - d.y).normalize().scale(e.speed);
+      d.body.velocity.lerp(want, t);
+    });
+  }
+
+  dasherCruise(d) {
+    if (this.finished) return;
+    const e = COIN_DASH.enemies.dasher;
+    this.physics.velocityFromAngle(Phaser.Math.Between(0, 359), e.cruiseSpeed, d.body.velocity);
+    this.time.delayedCall(Phaser.Math.FloatBetween(...e.dashEvery) * 1000, () => this.dasherWindup(d));
+  }
+
+  dasherWindup(d) {
+    if (this.finished) return;
+    const e = COIN_DASH.enemies.dasher;
+    d.body.setVelocity(0, 0);
+    this.paintEnemy(d.setData('windup', true));
+    this.time.delayedCall(e.windup * 1000, () => {
+      if (this.finished) return;
+      this.paintEnemy(d.setData('windup', false));
+      // Charge at where the player is now, so moving during the flash dodges it.
+      this.physics.moveTo(d, this.player.x, this.player.y, e.dashSpeed);
+      this.time.delayedCall(e.dashTime * 1000, () => this.dasherCruise(d));
+    });
+  }
+
   scheduleTimeCoin() {
     const [min, max] = COIN_DASH.timeCoin.every;
     this.time.delayedCall(Phaser.Math.FloatBetween(min, max) * 1000, () => this.spawnTimeCoin());
@@ -228,8 +301,9 @@ class CoinDash extends Phaser.Scene {
     this.hideTimeCoin();
   }
 
-  update() {
+  update(time, delta) {
     if (this.finished) return;
+    this.steerHunters(delta);
     const dx = Number(this.cursors.right.isDown || this.keys.D.isDown)
       - Number(this.cursors.left.isDown || this.keys.A.isDown);
     const dy = Number(this.cursors.down.isDown || this.keys.S.isDown)
@@ -245,14 +319,14 @@ class CoinDash extends Phaser.Scene {
     if (seconds === 0) this.finish('Time is up!');
   }
 
-  finish(reason) {
+  finish(reason, hitColor = COIN_DASH.colors.drone) {
     if (this.finished) return;
     this.finished = true;
     this.finishedAt = this.time.now;
     this.physics.pause();
     this.releaseStick();
     CoinDashSound[reason === 'Time is up!' ? 'timeUp' : 'hit']();
-    if (reason !== 'Time is up!') { this.cameras.main.shake(250, 0.01).flash(150, 255, 40, 60); this.burst(this.player.x, this.player.y, COIN_DASH.colors.drone, 16); }
+    if (reason !== 'Time is up!') { this.cameras.main.shake(250, 0.01).flash(150, 255, 40, 60); this.burst(this.player.x, this.player.y, hitColor, 16); }
     const c = COIN_DASH;
     const newBest = this.score > this.best;
     if (newBest) { this.best = this.score; saveBest(this.difficulty, this.best); }
