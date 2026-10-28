@@ -6,6 +6,13 @@ window.COIN_DASH = {
   playerSpeed: 240,
   droneSpeed: 105,
   droneCount: 3,
+  // Extra enemies join the round appearAt seconds in, after blinking for `warning` seconds.
+  enemies: {
+    warning: 1,
+    hunter: { appearAt: 8, speed: 75, turnRate: 0.03, size: 22, color: 0xff8c1a },
+    dasher: { appearAt: 18, cruiseSpeed: 50, dashSpeed: 430, dashEvery: [2.5, 4], windup: 0.6, dashTime: 0.45,
+      radius: 11, color: 0xb44dff }
+  },
   timeCoin: { every: [10, 15], lifetime: 4, bonusSeconds: 5, color: 0x39ff14 },
   // Neon arcade palette: near-black backdrop, synthwave grid, glowing saturated sprites.
   colors: {

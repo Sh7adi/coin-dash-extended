@@ -40,7 +40,10 @@ class CoinDash extends Phaser.Scene {
       CoinDashSound.coin();
       this.placeCoin();
     });
-    this.physics.add.overlap(this.player, this.drones, () => this.finish('A drone caught you!'));
+    this.physics.add.overlap(this.player, this.drones,
+      (player, enemy) => this.finish(`A ${enemy.getData('kind') || 'drone'} caught you!`));
+    this.time.delayedCall(c.enemies.hunter.appearAt * 1000, () => this.spawnEnemy('hunter'));
+    this.time.delayedCall(c.enemies.dasher.appearAt * 1000, () => this.spawnEnemy('dasher'));
     this.timeCoin = this.add.circle(0, 0, 11, c.timeCoin.color).setStrokeStyle(3, 0xffffff).setVisible(false);
     this.physics.add.existing(this.timeCoin);
     this.timeCoin.body.setCircle(11);
@@ -62,6 +65,67 @@ class CoinDash extends Phaser.Scene {
     } while (Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 60);
     this.coin.setPosition(x, y);
     this.coin.body.reset(x, y);
+  }
+
+  spawnEnemy(kind) {
+    if (this.finished) return;
+    const c = COIN_DASH, e = c.enemies[kind];
+    // Appear well away from the player and blink before becoming dangerous.
+    let x, y;
+    do {
+      x = Phaser.Math.Between(40, c.width - 40);
+      y = Phaser.Math.Between(84, c.height - 40);
+    } while (Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 250);
+    const enemy = kind === 'hunter'
+      ? this.add.rectangle(x, y, e.size, e.size, e.color).setStrokeStyle(2, 0xffffff)
+      : this.add.circle(x, y, e.radius, e.color).setStrokeStyle(3, 0xffffff);
+    enemy.setData('kind', kind);
+    this.tweens.add({ targets: enemy, alpha: { from: 0.15, to: 1 }, duration: 250, yoyo: true, repeat: -1 });
+    this.time.delayedCall(c.enemies.warning * 1000, () => {
+      if (this.finished) return;
+      this.tweens.killTweensOf(enemy);
+      enemy.setAlpha(1);
+      this.drones.add(enemy);
+      enemy.body.setCollideWorldBounds(true);
+      if (kind === 'hunter') {
+        enemy.body.setAngularVelocity(120);
+      } else {
+        enemy.body.setCircle(e.radius).setBounce(1, 1);
+        this.dasherCruise(enemy);
+      }
+    });
+  }
+
+  steerHunters(delta) {
+    const e = COIN_DASH.enemies.hunter;
+    // Frame-rate independent easing toward the player; turning sharply also slows it down.
+    const t = 1 - Math.pow(1 - e.turnRate, delta / (1000 / 60));
+    this.drones.getChildren().forEach((d) => {
+      if (d.getData('kind') !== 'hunter') return;
+      const want = new Phaser.Math.Vector2(this.player.x - d.x, this.player.y - d.y).normalize().scale(e.speed);
+      d.body.velocity.lerp(want, t);
+    });
+  }
+
+  dasherCruise(d) {
+    if (this.finished) return;
+    const e = COIN_DASH.enemies.dasher;
+    this.physics.velocityFromAngle(Phaser.Math.Between(0, 359), e.cruiseSpeed, d.body.velocity);
+    this.time.delayedCall(Phaser.Math.FloatBetween(...e.dashEvery) * 1000, () => this.dasherWindup(d));
+  }
+
+  dasherWindup(d) {
+    if (this.finished) return;
+    const e = COIN_DASH.enemies.dasher;
+    d.body.setVelocity(0, 0);
+    d.setFillStyle(0xffffff);
+    this.time.delayedCall(e.windup * 1000, () => {
+      if (this.finished) return;
+      d.setFillStyle(e.color);
+      // Charge at where the player is now, so moving during the flash dodges it.
+      this.physics.moveTo(d, this.player.x, this.player.y, e.dashSpeed);
+      this.time.delayedCall(e.dashTime * 1000, () => this.dasherCruise(d));
+    });
   }
 
   scheduleTimeCoin() {
@@ -108,8 +172,9 @@ class CoinDash extends Phaser.Scene {
     this.hideTimeCoin();
   }
 
-  update() {
+  update(time, delta) {
     if (this.finished) return;
+    this.steerHunters(delta);
     const dx = Number(this.cursors.right.isDown || this.keys.D.isDown)
       - Number(this.cursors.left.isDown || this.keys.A.isDown);
     const dy = Number(this.cursors.down.isDown || this.keys.S.isDown)
