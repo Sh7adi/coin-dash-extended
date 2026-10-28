@@ -1,24 +1,42 @@
 /* global Phaser, COIN_DASH */
 const BEST_KEY = 'coinDash.bestScore';
-function loadBest() {
-  try { return Math.max(0, parseInt(localStorage.getItem(BEST_KEY), 10) || 0); } catch (e) { return 0; }
+const DIFFICULTY_KEY = 'coinDash.difficulty';
+// Normal keeps the original key so best scores from before presets carry over.
+function bestKey(difficulty) {
+  return difficulty === 'normal' ? BEST_KEY : `${BEST_KEY}.${difficulty}`;
 }
-function saveBest(n) {
-  try { localStorage.setItem(BEST_KEY, String(n)); } catch (e) { /* storage unavailable */ }
+function loadBest(difficulty) {
+  try { return Math.max(0, parseInt(localStorage.getItem(bestKey(difficulty)), 10) || 0); } catch (e) { return 0; }
+}
+function saveBest(difficulty, n) {
+  try { localStorage.setItem(bestKey(difficulty), String(n)); } catch (e) { /* storage unavailable */ }
+}
+function loadDifficulty() {
+  try {
+    const id = localStorage.getItem(DIFFICULTY_KEY);
+    if (Object.prototype.hasOwnProperty.call(COIN_DASH.difficulties, id)) return id;
+  } catch (e) { /* storage unavailable */ }
+  return COIN_DASH.defaultDifficulty;
+}
+function saveDifficulty(id) {
+  try { localStorage.setItem(DIFFICULTY_KEY, id); } catch (e) { /* storage unavailable */ }
 }
 class CoinDash extends Phaser.Scene {
   constructor() { super('CoinDash'); }
 
   create() {
-    const c = COIN_DASH;
+    this.difficulty = this.difficulty || loadDifficulty();
+    // Preset values override the base tuning for this round.
+    const c = this.tune = { ...COIN_DASH, ...COIN_DASH.difficulties[this.difficulty] };
     this.score = 0;
-    this.best = loadBest();
+    this.best = loadBest(this.difficulty);
     this.finished = false;
     this.deadline = this.time.now + c.roundSeconds * 1000;
     this.physics.world.setBounds(0, 44, c.width, c.height - 44);
     this.add.grid(c.width / 2, c.height / 2, c.width, c.height, 40, 40,
       c.colors.background, 1, c.colors.grid, 0.45);
     this.hud = this.add.text(18, 12, '', { font: '18px monospace', color: c.colors.hud });
+    this.add.text(c.width - 18, 12, `${c.label} [1/2/3]`, { font: '18px monospace', color: c.colors.hud }).setOrigin(1, 0);
     this.player = this.add.rectangle(c.width / 2, c.height / 2, 24, 24, c.colors.player);
     this.physics.add.existing(this.player);
     this.player.body.setCollideWorldBounds(true);
@@ -28,7 +46,7 @@ class CoinDash extends Phaser.Scene {
     this.placeCoin();
     this.drones = this.physics.add.group();
     for (let i = 0; i < c.droneCount; i++) {
-      const drone = this.add.rectangle(90 + i * 270, 100, 26, 26, c.colors.drone);
+      const drone = this.add.rectangle(90 + (i % 3) * 270, 100 + Math.floor(i / 3) * 300, 26, 26, c.colors.drone);
       this.drones.add(drone);
       drone.body.setCollideWorldBounds(true).setBounce(1, 1);
       const angle = (35 + i * 105) * Math.PI / 180;
@@ -50,6 +68,14 @@ class CoinDash extends Phaser.Scene {
     this.cursors = this.input.keyboard.createCursorKeys();
     this.keys = this.input.keyboard.addKeys('W,A,S,D,R');
     this.input.keyboard.on('keydown-R', () => this.scene.restart());
+    const presets = Object.keys(COIN_DASH.difficulties);
+    this.input.keyboard.on('keydown', (e) => {
+      const id = presets[Number(e.key) - 1];
+      if (!id || e.repeat) return;
+      this.difficulty = id;
+      saveDifficulty(id);
+      this.scene.restart();
+    });
   }
 
   placeCoin() {
@@ -114,7 +140,7 @@ class CoinDash extends Phaser.Scene {
       - Number(this.cursors.left.isDown || this.keys.A.isDown);
     const dy = Number(this.cursors.down.isDown || this.keys.S.isDown)
       - Number(this.cursors.up.isDown || this.keys.W.isDown);
-    const direction = new Phaser.Math.Vector2(dx, dy).normalize().scale(COIN_DASH.playerSpeed);
+    const direction = new Phaser.Math.Vector2(dx, dy).normalize().scale(this.tune.playerSpeed);
     this.player.body.setVelocity(direction.x, direction.y);
     const seconds = Math.max(0, Math.ceil((this.deadline - this.time.now) / 1000));
     this.hud.setText(`Coins: ${this.score}          Best: ${this.best}          Time: ${seconds}s`);
@@ -128,10 +154,10 @@ class CoinDash extends Phaser.Scene {
     CoinDashSound[reason === 'Time is up!' ? 'timeUp' : 'hit']();
     const c = COIN_DASH;
     const newBest = this.score > this.best;
-    if (newBest) { this.best = this.score; saveBest(this.best); }
+    if (newBest) { this.best = this.score; saveBest(this.difficulty, this.best); }
     this.add.rectangle(c.width / 2, c.height / 2, 460, 200, c.colors.panel, 0.95);
     this.add.text(c.width / 2, c.height / 2,
-      `${reason}\n${this.score} coins collected\n${newBest ? 'New best! ' : ''}Best: ${this.best}\nPress R to try again`,
+      `${reason}\n${this.score} coins collected\n${newBest ? 'New best! ' : ''}${this.tune.label} best: ${this.best}\nPress R to try again`,
       { font: '24px monospace', color: c.colors.panelText, align: 'center', lineSpacing: 12 }
     ).setOrigin(0.5);
   }
