@@ -53,6 +53,7 @@ class CoinDash extends Phaser.Scene {
       if (this.finished) return;
       this.score++;
       CoinDashSound.coin();
+      this.burst(this.coin.x, this.coin.y, COIN_DASH.colors.coin);
       this.placeCoin();
     });
     this.physics.add.overlap(this.player, this.drones, () => this.finish('A drone caught you!'));
@@ -93,6 +94,14 @@ class CoinDash extends Phaser.Scene {
     } while (Phaser.Math.Distance.Between(x, y, this.player.x, this.player.y) < 60);
     this.coin.setPosition(x, y);
     this.coin.body.reset(x, y);
+  }
+
+  burst(x, y, color, count = 10) {
+    if (!this.textures.exists('spark')) this.make.graphics({}, false).fillStyle(0xffffff).fillCircle(4, 4, 4).generateTexture('spark', 8, 8).destroy();
+    const fx = this.add.particles(x, y, 'spark', { speed: { min: 80, max: 200 }, lifespan: 400,
+      scale: { start: 1, end: 0.2 }, alpha: { start: 1, end: 0 }, tint: color, emitting: false });
+    fx.explode(count);
+    this.time.delayedCall(450, () => fx.destroy());
   }
 
   scheduleTimeCoin() {
@@ -136,6 +145,7 @@ class CoinDash extends Phaser.Scene {
     const label = this.add.text(this.timeCoin.x, this.timeCoin.y - 14, `+${bonus}s`,
       { font: 'bold 20px monospace', color: '#' + COIN_DASH.colors.timeCoin.toString(16).padStart(6, '0') }).setOrigin(0.5);
     this.tweens.add({ targets: label, y: label.y - 36, alpha: 0, duration: 900, onComplete: () => label.destroy() });
+    this.burst(this.timeCoin.x, this.timeCoin.y, COIN_DASH.colors.timeCoin ?? COIN_DASH.timeCoin.color);
     this.hideTimeCoin();
   }
 
@@ -157,6 +167,7 @@ class CoinDash extends Phaser.Scene {
     this.finished = true;
     this.physics.pause();
     CoinDashSound[reason === 'Time is up!' ? 'timeUp' : 'hit']();
+    if (reason !== 'Time is up!') { this.cameras.main.shake(250, 0.01).flash(150, 255, 40, 60); this.burst(this.player.x, this.player.y, COIN_DASH.colors.drone, 16); }
     const c = COIN_DASH;
     const newBest = this.score > this.best;
     if (newBest) { this.best = this.score; saveBest(this.best); }
