@@ -41,4 +41,6 @@ header > p:last-child { color: var(--muted); }
     inset 0 0 12px rgba(0, 240, 255, .4);
 }
 canvas { display: block; }
+/* Let the game own touch gestures instead of the page scrolling or zooming. */
+#game { touch-action: none; -webkit-user-select: none; user-select: none; }
 strong { color: var(--gold); text-shadow: 0 0 6px rgba(255, 212, 0, .55); }

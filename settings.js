@@ -6,6 +6,8 @@ window.COIN_DASH = {
   playerSpeed: 240,
   droneSpeed: 105,
   droneCount: 3,
+  // Floating joystick: touch anywhere on the game and drag. Radius is in screen (CSS) pixels.
+  touch: { stickRadius: 55, deadZone: 0.2, restartDelay: 600 },
   timeCoin: { every: [10, 15], lifetime: 4, bonusSeconds: 5, color: 0x39ff14 },
   // Neon arcade palette: near-black backdrop, synthwave grid, glowing saturated sprites.
   colors: {

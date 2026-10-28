@@ -1,4 +1,4 @@
-// Scoring sounds synthesized with the Web Audio API. Audio starts on the first keydown; M toggles mute.
+// Scoring sounds synthesized with the Web Audio API. Audio starts on the first keydown or touch; M toggles mute.
 window.CoinDashSound = (() => {
   let ctx = null, muted = false;
   const unlock = () => {
@@ -27,6 +27,7 @@ window.CoinDashSound = (() => {
     unlock();
     if ((e.key === 'm' || e.key === 'M') && !e.repeat) muted = !muted;
   });
+  window.addEventListener('pointerdown', unlock);
   return {
     coin: play(() => { tone(880, 880, 0, 0.06, 'square', 0.08); tone(1320, 1320, 0.06, 0.12, 'square', 0.08); }),
     hit: play(() => { tone(220, 55, 0, 0.45, 'sawtooth', 0.18); }),
