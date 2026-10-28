@@ -1,7 +1,44 @@
+/* Neon arcade theme — system fonts only, no external assets. */
+:root {
+  --bg: #07030d;
+  --text: #e9e4ff;
+  --muted: #a99cc9;
+  --pink: #ff2e88;
+  --cyan: #00f0ff;
+  --lime: #b6ff3b;
+  --gold: #ffd400;
+}
 * { box-sizing: border-box; }
-body { margin: 0; background: #0a1120; color: #e5edf7; font: 17px/1.5 system-ui, sans-serif; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 50% -10%, rgba(255, 46, 136, .18), transparent 60%),
+    radial-gradient(ellipse at 50% 110%, rgba(0, 240, 255, .12), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font: 17px/1.5 system-ui, sans-serif;
+}
 main { max-width: 850px; margin: 30px auto; padding: 0 20px; }
-header > p:first-child { color: #71e8ce; font-size: 12px; letter-spacing: .15em; }
-h1 { margin: 0; font-size: 40px; }
-#game { border: 1px solid #34445e; border-radius: 12px; overflow: hidden; }
+header > p:first-child {
+  color: var(--lime); font-size: 12px; letter-spacing: .25em;
+  text-shadow: 0 0 6px rgba(182, 255, 59, .7);
+}
+h1 {
+  margin: 0; font-size: 44px; letter-spacing: .04em; text-transform: uppercase;
+  color: #fff0f8;
+  text-shadow: 0 0 4px #fff, 0 0 10px var(--pink), 0 0 22px var(--pink), 0 0 42px rgba(255, 46, 136, .6);
+}
+header > p:last-child { color: var(--muted); }
+#game {
+  border: 2px solid var(--cyan);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 0 6px var(--cyan),
+    0 0 20px rgba(0, 240, 255, .55),
+    0 0 48px rgba(255, 46, 136, .35),
+    inset 0 0 12px rgba(0, 240, 255, .4);
+}
 canvas { display: block; }
+strong { color: var(--gold); text-shadow: 0 0 6px rgba(255, 212, 0, .55); }
