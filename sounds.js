@@ -30,6 +30,7 @@ window.CoinDashSound = (() => {
   return {
     coin: play(() => { tone(880, 880, 0, 0.06, 'square', 0.08); tone(1320, 1320, 0.06, 0.12, 'square', 0.08); }),
     hit: play(() => { tone(220, 55, 0, 0.45, 'sawtooth', 0.18); }),
+    levelUp: play(() => { [659, 784, 988, 1319].forEach((f, i) => tone(f, f, i * 0.07, 0.12, 'square', 0.07)); }),
     timeUp: play(() => { [523, 659, 784, 1047].forEach((f, i) => tone(f, f, i * 0.12, 0.18, 'triangle', 0.15)); }),
     toggleMute() { muted = !muted; return muted; },
     get muted() { return muted; }

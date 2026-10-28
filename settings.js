@@ -6,6 +6,8 @@ window.COIN_DASH = {
   playerSpeed: 240,
   droneSpeed: 105,
   droneCount: 3,
+  // Reach a level's coin goal before the clock runs out to advance; the clock then resets.
+  levels: { firstGoal: 8, goalStep: 2, droneSpeedStep: 15, maxDrones: 6, newDroneWarning: 1 },
   timeCoin: { every: [10, 15], lifetime: 4, bonusSeconds: 5, color: 0x39ff14 },
   // Neon arcade palette: near-black backdrop, synthwave grid, glowing saturated sprites.
   colors: {
