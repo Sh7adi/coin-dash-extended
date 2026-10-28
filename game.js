@@ -32,6 +32,9 @@ function toggleTheme() {
   document.documentElement.dataset.theme = c.theme;
   try { localStorage.setItem('coinDash.theme', c.theme); } catch (e) { /* storage unavailable */ }
   showThemeLabel();
+  // The two frames differ in thickness; re-fit now rather than on Phaser's next 500ms resize check.
+  const scale = window.coinDashGame && window.coinDashGame.scale;
+  if (scale && scale.getParentBounds()) scale.refresh();
   const scene = window.coinDashGame && window.coinDashGame.scene.getScene('CoinDash');
   if (scene && scene.sys.isActive() && scene.hud) scene.applyTheme();
 }

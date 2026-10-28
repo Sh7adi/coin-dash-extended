@@ -81,7 +81,9 @@ h1 {
   text-shadow: var(--title-glow);
 }
 header > p:last-child { color: var(--muted); }
-#game {
+/* The frame lives on a wrapper: Phaser's FIT sizing measures #game's whole box, so any border or
+   padding on #game itself pushes the right edge of the canvas out of view. */
+.game-frame {
   border: var(--frame-border);
   outline: var(--frame-outline);
   border-radius: var(--frame-radius);
@@ -100,12 +102,14 @@ strong { color: var(--key); background: var(--key-bg); padding: var(--key-pad); 
 }
 /* Let the game own touch gestures instead of the page scrolling or zooming. */
 #game { touch-action: none; -webkit-user-select: none; user-select: none; }
+/* Height follows width (800x500 game), so FIT can grow the canvas back after a thinner frame. */
+#game { aspect-ratio: 8 / 5; }
 /* Retro-only layout tweaks that aren't just colours. */
 :root[data-theme="retro"] main { padding: 0 16px; }
 :root[data-theme="retro"] header > p:first-child {
   display: inline-block; margin: 0 0 8px; padding: 2px 8px; font-weight: bold; letter-spacing: .2em;
 }
 :root[data-theme="retro"] h1 { font-size: 40px; font-weight: 900; letter-spacing: .08em; }
-:root[data-theme="retro"] #game,
+:root[data-theme="retro"] .game-frame,
 :root[data-theme="retro"] canvas { image-rendering: pixelated; }
 :root[data-theme="retro"] #theme-toggle { border-color: var(--darkest); }
